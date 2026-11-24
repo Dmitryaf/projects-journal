@@ -469,11 +469,16 @@ export default function CodexContext() {
   const projectId = choices.some((project) => project.id === requested)
     ? requested!
     : (review.data?.projectId ?? choices[0]?.id ?? '');
+  const savedProject = !reviewId ? choices.find((project) => project.id === requested) : undefined;
   const digests = useQuery({
-    queryKey: ['codex-digests', reviewId, cursor],
+    queryKey: ['codex-digests', reviewId, savedProject?.id, cursor],
     queryFn: ({ signal }) =>
       api<{ items: CodexDigest[]; nextCursor: string | null }>(
-        `/codex-context/digests?${new URLSearchParams({ ...(reviewId ? { reviewId } : {}), ...(cursor ? { cursor } : {}) })}`,
+        `/codex-context/digests?${new URLSearchParams({
+          ...(reviewId ? { reviewId } : {}),
+          ...(savedProject ? { projectId: savedProject.id } : {}),
+          ...(cursor ? { cursor } : {}),
+        })}`,
         'GET',
         undefined,
         signal,
@@ -483,7 +488,17 @@ export default function CodexContext() {
   const refresh = () => client.invalidateQueries({ queryKey: ['codex-digests'] });
   return (
     <>
-      <h1>Диалоги Codex для контекста</h1>
+      <h1>{savedProject ? 'Сохранённые выдержки Codex' : 'Диалоги Codex для контекста'}</h1>
+      {savedProject && (
+        <p className="row">
+          <Link to={`/projects/${savedProject.id}#project-discussions`}>
+            {savedProject.metadata.name}
+          </Link>
+          <Link to="/codex-context" onClick={() => setCursors([null])}>
+            Все сохранённые выдержки →
+          </Link>
+        </p>
+      )}
       <p>До двух диалогов на проект.</p>
       <p>
         <Link to="/reviews">Выбрать обзор периода →</Link>

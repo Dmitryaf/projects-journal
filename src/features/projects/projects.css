@@ -69,6 +69,39 @@
 .project-work-actions .action-menu-trigger {
   margin-inline-start: auto;
 }
+.project-closure-summary {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+}
+.project-closure-summary h2 {
+  margin: 0 0 4px;
+}
+.project-closure-summary p {
+  margin: 6px 0 0;
+}
+#project-decisions .work-list {
+  padding: 0;
+  list-style: none;
+}
+#project-decisions .work-list small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+}
+.project-decision-preview {
+  display: -webkit-box;
+  margin: 4px 0 0;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.project-simple :is(#project-decisions, #project-discussions, #project-review) .empty {
+  margin-block: 10px 0;
+  padding: 0;
+}
 .project-simple #project-tasks .compact-list {
   background: transparent;
 }

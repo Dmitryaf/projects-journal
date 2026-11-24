@@ -1,6 +1,6 @@
 import { taskInProject } from '../../../shared/task-projects';
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import type { Project } from '../../../shared/contracts';
 import { isClosedProject } from '../../../shared/project-lifecycle';
 import { isTaskOpen } from '../../../shared/task-status';
@@ -72,7 +72,9 @@ function CatalogRow({ project }: { project: Project }) {
 
 export default function Projects() {
   const { data: w } = useWorkspace();
-  const [status, setStatus] = useState('');
+  const [params, setParams] = useSearchParams();
+  const status = params.get('status') ?? '';
+  const setStatus = (value: string) => setParams(value ? { status: value } : {});
   const [type, setType] = useState('');
   const [priority, setPriority] = useState('');
   const [query, setQuery] = useState('');
@@ -80,7 +82,8 @@ export default function Projects() {
   const activeFilters = [type, priority].filter(Boolean).length;
   const projects = w!.projects.filter(
     (p) =>
-      (!status ||
+      (status === 'all' ||
+        (!status && !isClosedProject(p.metadata.status)) ||
         (status === 'closed'
           ? isClosedProject(p.metadata.status)
           : p.metadata.status === status)) &&
@@ -108,7 +111,18 @@ export default function Projects() {
               : `${projects.length} из ${w!.projects.length}`}
           </span>
         </h1>
-        <Link to="/settings">Каталоги проектов</Link>
+        <div className="row">
+          <Link to="/projects" aria-current={!status ? 'page' : undefined}>
+            Текущие проекты
+          </Link>
+          <Link
+            to="/projects?status=closed"
+            aria-current={status === 'closed' ? 'page' : undefined}
+          >
+            Архив проектов
+          </Link>
+          <Link to="/settings">Каталоги проектов</Link>
+        </div>
       </div>
       <div className="catalog-filters">
         <input
@@ -123,7 +137,8 @@ export default function Projects() {
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         >
-          <option value="">Все статусы</option>
+          <option value="">Текущие</option>
+          <option value="all">Все статусы</option>
           <option value="active">Активные</option>
           <option value="paused">Отложенные</option>
           <option value="closed">Закрытые</option>

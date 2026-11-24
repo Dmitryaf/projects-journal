@@ -28,9 +28,20 @@ const discussionState: Record<PeriodRunState, string> = {
   pending: 'Ожидает подтверждения',
   running: 'Codex отвечает',
 };
-export function SavedAnalyses({ query }: { query: ReturnType<typeof useSavedAnalyses> }) {
+export function SavedAnalyses({
+  query,
+  projectId,
+}: {
+  query: ReturnType<typeof useSavedAnalyses>;
+  projectId?: string;
+}) {
+  const items = query.data?.items;
   return (
-    <section className="analysis-saved" aria-label="Сохранённые анализы проектов">
+    <section
+      id={projectId ? 'project-discussions' : undefined}
+      className="analysis-saved"
+      aria-label="Сохранённые анализы проектов"
+    >
       <h2>Обсуждения</h2>
       {query.isPending && <p role="status">Загружаем сохранённые анализы…</p>}
       {query.error && (
@@ -39,8 +50,8 @@ export function SavedAnalyses({ query }: { query: ReturnType<typeof useSavedAnal
           <button onClick={() => query.refetch()}>Повторить загрузку анализов</button>
         </p>
       )}
-      {query.data?.items.length === 0 && <p className="empty">Сохранённых анализов пока нет.</p>}
-      {query.data?.items.map((run) => (
+      {items?.length === 0 && <p className="empty">Сохранённых обсуждений пока нет.</p>}
+      {(projectId ? items?.slice(0, 3) : items)?.map((run) => (
         <article className="analysis-discussion" key={run.id}>
           <Link
             to={`/${run.origin === 'codex_runtime' ? 'codex-analysis' : 'period-analysis'}?review=${run.reviewKey}&run=${run.id}`}
@@ -54,8 +65,15 @@ export function SavedAnalyses({ query }: { query: ReturnType<typeof useSavedAnal
           </p>
         </article>
       ))}
-      {query.data?.truncated && (
-        <Link to="/timeline?kind=ai_analysis">Более ранние разборы в истории →</Link>
+      {projectId ? (
+        <div className="row section-space">
+          <Link to={`/analysis?project=${projectId}`}>Все обсуждения проекта →</Link>
+          <Link to={`/codex-context?project=${projectId}`}>Сохранённые выдержки Codex →</Link>
+        </div>
+      ) : (
+        query.data?.truncated && (
+          <Link to="/timeline?kind=ai_analysis">Более ранние разборы в истории →</Link>
+        )
       )}
     </section>
   );

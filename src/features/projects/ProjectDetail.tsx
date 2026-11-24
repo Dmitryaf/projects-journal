@@ -1,6 +1,6 @@
 import { taskInProject } from '../../../shared/task-projects';
 import { dateInZone } from '../../../shared/periods';
-import { isTaskOpen } from '../../../shared/task-status';
+import { isTaskOpen, taskOutcome } from '../../../shared/task-status';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useForm } from 'react-hook-form';
@@ -14,11 +14,13 @@ import {
   typeLabels,
   priorityLabels,
   relationLabels,
+  decisionLabels,
 } from '../../shared/labels';
 import { useWorkspace, useActions, workspaceKey } from '../../shared/workspace';
 import { UnsavedChanges } from '../../shared/UnsavedChanges';
 import { ProjectReview } from './ProjectReview';
 import { RecentHistory } from '../history/RecentHistory';
+import { SavedAnalyses, useSavedAnalyses } from '../analysis/RecentAnalyses';
 import { ActionMenu, ActionMenuItem } from '../../shared/ActionMenu';
 import './projects.css';
 import { RemoveProject } from './RemoveProject';
@@ -238,11 +240,25 @@ function MetadataEditor({ project, onClose }: { project: Project; onClose: () =>
   );
 }
 
-export function DecisionFiles({ projectId }: { projectId?: string }) {
+export function DecisionFiles({
+  projectId,
+  view = 'all',
+  limit,
+}: {
+  projectId?: string;
+  view?: 'all' | 'current' | 'archive';
+  limit?: number;
+}) {
   const { data: w } = useWorkspace();
   const [contents, setContents] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const records = w!.fileDecisions.filter((d) => !projectId || d.projectId === projectId);
+  const records = w!.fileDecisions.filter((d) => {
+    const archived = d.metadata?.status === 'superseded' || d.metadata?.status === 'rejected';
+    return (
+      (!projectId || d.projectId === projectId) &&
+      (view === 'all' || (view === 'archive' ? archived : !archived))
+    );
+  });
   return (
     <section id="file-decisions" className="section-space">
       <h2>
@@ -253,7 +269,7 @@ export function DecisionFiles({ projectId }: { projectId?: string }) {
         документ.
       </p>
       <div className="timeline section-space">
-        {records.map((record) => (
+        {records.slice(0, limit).map((record) => (
           <article className="panel prose" key={record.key}>
             {!projectId && (
               <Link to={`/projects/${record.projectId}`}>
@@ -365,6 +381,10 @@ export function DecisionFiles({ projectId }: { projectId?: string }) {
       )}
     </section>
   );
+}
+
+function ProjectDiscussions({ projectId }: { projectId: string }) {
+  return <SavedAnalyses query={useSavedAnalyses([projectId])} projectId={projectId} />;
 }
 
 function Context({ project }: { project: Project }) {
@@ -677,13 +697,20 @@ export default function ProjectDetail() {
     };
   }, [id, client]);
   if (!p) return <p className="empty">Проект не загружен.</p>;
-  const tasks = w!.tasks
-    .filter((t) => taskInProject(t, p.id) && isTaskOpen(t))
+  const closed = isClosedProject(p.metadata.status);
+  const projectTasks = w!.tasks.filter((t) => taskInProject(t, p.id));
+  const tasks = projectTasks
+    .filter(isTaskOpen)
     .sort(
       (a, b) =>
         ({ high: 0, normal: 1, low: 2 })[a.priority] - { high: 0, normal: 1, low: 2 }[b.priority] ||
         a.number - b.number,
     );
+  const completed = projectTasks.filter((task) => taskOutcome(task) === 'done').length;
+  const cancelled = projectTasks.filter((task) => taskOutcome(task) === 'cancelled').length;
+  const decisions = w!.decisions
+    .filter((decision) => decision.projectId === p.id)
+    .sort((a, b) => b.date.localeCompare(a.date));
   const technicalSignals = p.signals.filter(
     (s) => s.code === 'dirty' || s.code === 'review' || s.level === 'info',
   );
@@ -700,8 +727,8 @@ export default function ProjectDetail() {
     );
   return (
     <>
-      <Link to="/projects" className="back-link">
-        ← Все проекты
+      <Link to={closed ? '/projects?status=closed' : '/projects'} className="back-link">
+        {closed ? '← Архив проектов' : '← Все проекты'}
       </Link>
       <div className="page-heading">
         <div>
@@ -710,7 +737,7 @@ export default function ProjectDetail() {
           )}
           <h1>{p.metadata.name}</h1>
           <div className="row">
-            {p.metadata.status !== 'unknown' && (
+            {!closed && p.metadata.status !== 'unknown' && (
               <span className={`badge ${p.metadata.status}`}>
                 {statusLabels[p.metadata.status]}
               </span>
@@ -720,14 +747,21 @@ export default function ProjectDetail() {
         </div>
       </div>
       <div className="project-work-actions" aria-label="Действия проекта">
-        <Link className="button primary" to={`/tasks?project=${p.id}&new=1`}>
-          <Plus size={17} aria-hidden="true" />
-          Добавить задачу
-        </Link>
-        <Link className="button" to={`/observations?project=${p.id}`}>
+        {closed && (
+          <a className="button primary" href="#project-history">
+            К истории
+          </a>
+        )}
+        <Link className={`button${closed ? '' : ' primary'}`} to={`/observations?project=${p.id}`}>
           <NotebookPen size={17} aria-hidden="true" />
           Записать наблюдение
         </Link>
+        {!closed && (
+          <Link className="button" to={`/tasks?project=${p.id}&new=1`}>
+            <Plus size={17} aria-hidden="true" />
+            Добавить задачу
+          </Link>
+        )}
         <ActionMenu label="Действия проекта">
           <ActionMenuItem
             disabled={busy || editing || lifecycleAction !== null}
@@ -763,13 +797,20 @@ export default function ProjectDetail() {
           />
         </ActionMenu>
       </div>
+      <ProjectLifecycle
+        project={p}
+        action={lifecycleAction}
+        onClose={() => setLifecycleAction(null)}
+      />
       <nav className="project-section-nav" aria-label="Разделы проекта">
         <a href="#project-about">О проекте</a>
-        <a href="#project-tasks">
-          Задачи <span className="count">{tasks.length}</span>
-        </a>
         <a href="#project-history">История</a>
+        <a href="#project-decisions">Решения</a>
+        <a href="#project-discussions">Обсуждения</a>
         <a href="#project-review">Итоги и развитие</a>
+        <a href="#project-tasks">
+          Что осталось <span className="count">{tasks.length}</span>
+        </a>
       </nav>
       {!p.available && (
         <div className="message warning">
@@ -788,11 +829,6 @@ export default function ProjectDetail() {
       {editing && (
         <MetadataEditor key={`metadata:${p.id}`} project={p} onClose={() => setEditing(false)} />
       )}
-      <ProjectLifecycle
-        project={p}
-        action={lifecycleAction}
-        onClose={() => setLifecycleAction(null)}
-      />
       <div className="project-dossier project-simple section-space">
         <div>
           <section id="project-about" className="project-brief prose">
@@ -829,10 +865,57 @@ export default function ProjectDetail() {
               </section>
             )}
           </section>
+          <section
+            id="project-history"
+            className="section-space"
+            aria-label="Последние записи проекта"
+          >
+            <div className="section-heading">
+              <h2>Что происходило</h2>
+              <Link to={`/timeline?project=${p.id}`}>История проекта →</Link>
+            </div>
+            {p.notes && (
+              <details className="section-space">
+                <summary>Сохранённые заметки</summary>
+                <p className="preserve">{p.notes}</p>
+              </details>
+            )}
+            <RecentHistory projectId={p.id} />
+          </section>
+          <section id="project-decisions" className="section-space">
+            <div className="section-heading">
+              <h2>Решения</h2>
+              <Link to={`/decisions?project=${p.id}`}>Все решения проекта →</Link>
+            </div>
+            {decisions.length > 0 && (
+              <ul className="work-list">
+                {decisions.slice(0, 4).map((decision) => (
+                  <li key={decision.id}>
+                    <Link to={`/decisions?project=${p.id}#decision-${decision.id}`}>
+                      {decision.title}
+                    </Link>
+                    <small>
+                      {date(decision.date)} · {decisionLabels[decision.status]}
+                    </small>
+                    {decision.reason && (
+                      <p className="preserve project-decision-preview">{decision.reason}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {w!.fileDecisions.some((decision) => decision.projectId === p.id) ? (
+              <DecisionFiles projectId={p.id} limit={5} />
+            ) : (
+              decisions.length === 0 && <p className="empty">Решений пока нет.</p>
+            )}
+          </section>
+          <ProjectDiscussions key={p.id} projectId={p.id} />
+          <ProjectReview projectId={p.id} />
           <section id="project-tasks" className="section-space">
             <div className="section-heading">
               <h2>
-                Задачи <span className="count">{tasks.length}</span>
+                Что осталось <span className="count">{tasks.length}</span>
               </h2>
               <Link to={`/tasks?project=${p.id}`}>Все задачи →</Link>
             </div>
@@ -845,27 +928,21 @@ export default function ProjectDetail() {
                   {t.priority === 'high' && <span className="priority">Высокий приоритет</span>}
                 </div>
               ))}
-              {!tasks.length && (
-                <p className="muted">Открытых задач пока нет. Добавьте первую задачу.</p>
-              )}
+              {!tasks.length && <p className="muted">Открытых задач нет.</p>}
             </div>
-          </section>
-          <section
-            id="project-history"
-            className="section-space"
-            aria-label="Последние записи проекта"
-          >
-            <h2>Что происходило</h2>
-            {p.notes && (
-              <details className="section-space">
-                <summary>Сохранённые заметки</summary>
-                <p className="preserve">{p.notes}</p>
-              </details>
+            {(completed > 0 || cancelled > 0) && (
+              <div className="row section-space">
+                {completed > 0 && (
+                  <Link to={`/tasks?project=${p.id}&outcome=done`}>Завершённые · {completed}</Link>
+                )}
+                {cancelled > 0 && (
+                  <Link to={`/tasks?project=${p.id}&outcome=cancelled`}>
+                    Отменённые · {cancelled}
+                  </Link>
+                )}
+              </div>
             )}
-            <RecentHistory projectId={p.id} />
-            <Link to={`/timeline?project=${p.id}`}>История проекта →</Link>
           </section>
-          <ProjectReview projectId={p.id} />
         </div>
         <aside>
           <div
@@ -1054,9 +1131,8 @@ export default function ProjectDetail() {
             </details>
             <p className="row">
               <Link to="/checks">Все проверки →</Link>
-              <Link to="/decisions">Все решения →</Link>
+              <Link to={`/decisions?project=${p.id}`}>Все решения →</Link>
             </p>
-            <DecisionFiles projectId={p.id} />
           </div>
         </aside>
       </div>

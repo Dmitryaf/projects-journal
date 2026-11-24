@@ -166,9 +166,9 @@ export function ProjectLifecycle({
   const outcome = project.lifecycle?.currentClosure;
   if (!closed && !action) return null;
   return (
-    <section id="project-closure" className="section-space" aria-label="Итог проекта">
+    <section id="project-closure" aria-label="Итог проекта">
       {closed && (
-        <div className="panel prose">
+        <div className="project-closure-summary prose">
           <h2>{statusLabels[project.metadata.status]}</h2>
           {outcome ? (
             <>

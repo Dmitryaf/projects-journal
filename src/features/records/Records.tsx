@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import type { Decision, DecisionInput } from '../../../shared/contracts';
 import { api } from '../../shared/http';
@@ -10,6 +10,20 @@ import { DecisionFiles } from '../projects/ProjectDetail';
 export function Decisions() {
   const { data: w } = useWorkspace();
   const { act, busy } = useActions();
+  const [params, setParams] = useSearchParams();
+  const projectId = params.get('project') ?? undefined;
+  const view =
+    params.get('view') === 'archive'
+      ? 'archive'
+      : params.get('view') === 'current'
+        ? 'current'
+        : 'all';
+  const decisions = w!.decisions.filter(
+    (decision) =>
+      (!projectId || decision.projectId === projectId) &&
+      (view === 'all' ||
+        (view === 'archive' ? decision.status === 'superseded' : decision.status !== 'superseded')),
+  );
   const [id, setId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const empty: DecisionInput = {
@@ -17,7 +31,7 @@ export function Decisions() {
     context: '',
     decision: '',
     reason: '',
-    projectId: null,
+    projectId: projectId ?? null,
     date: today(),
     status: 'active',
   };
@@ -33,12 +47,41 @@ export function Decisions() {
       <div className="page-heading">
         <div>
           <h1>Решения</h1>
+          {projectId && (
+            <Link to={`/projects/${projectId}`}>
+              {w!.projects.find((project) => project.id === projectId)?.metadata.name ??
+                'Открыть проект'}
+            </Link>
+          )}
         </div>
         {!formOpen && (
-          <button className="primary" onClick={() => setFormOpen(true)}>
+          <button
+            className="primary"
+            onClick={() => {
+              reset(empty);
+              setFormOpen(true);
+            }}
+          >
             Новое решение
           </button>
         )}
+      </div>
+      <div className="row">
+        <label>
+          Показать решения
+          <select
+            value={view}
+            onChange={(event) => {
+              const next = new URLSearchParams(params);
+              next.set('view', event.currentTarget.value);
+              setParams(next);
+            }}
+          >
+            <option value="all">Все решения</option>
+            <option value="current">Текущие</option>
+            <option value="archive">Архив решений</option>
+          </select>
+        </label>
       </div>
       {formOpen && (
         <form
@@ -125,11 +168,11 @@ export function Decisions() {
       )}
       <div className="section-heading section-space">
         <h2>
-          Записанные решения <span className="count">{w!.decisions.length}</span>
+          Записанные решения <span className="count">{decisions.length}</span>
         </h2>
       </div>
       <div className="record-list">
-        {w!.decisions.map((d: Decision) => (
+        {decisions.map((d: Decision) => (
           <article id={`decision-${d.id}`} className="panel prose" key={d.id}>
             <div className="row between">
               {d.projectId ? (
@@ -187,8 +230,8 @@ export function Decisions() {
           </article>
         ))}
       </div>
-      {!w!.decisions.length && <p className="empty">Записанных решений пока нет.</p>}
-      <DecisionFiles />
+      {!decisions.length && <p className="empty">В этой выборке записанных решений нет.</p>}
+      <DecisionFiles projectId={projectId} view={view} />
     </>
   );
 }
