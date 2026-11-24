@@ -75,8 +75,11 @@ export async function startHttp(data: string, options: RuntimeOptions = {}) {
   const request = (route: string, options?: RequestInit) =>
     fetch(base + route, { signal: AbortSignal.timeout(5000), ...options });
   try {
-    for (let i = 0; i < 100 && processHandle.exitCode === null; i++) {
-      const response = await request('/api/health').catch(() => null);
+    const readyBy = performance.now() + 30_000;
+    while (performance.now() < readyBy && processHandle.exitCode === null) {
+      const response = await request('/api/health', { signal: AbortSignal.timeout(1000) }).catch(
+        () => null,
+      );
       if (response?.ok) {
         const health = await response
           .clone()
