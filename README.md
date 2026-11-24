@@ -1,57 +1,33 @@
 # Projects Journal
 
-A local dashboard for your projects, tools, tasks, ideas, and decisions. See what is active, what needs attention, and what to do next.
+A local project journal for keeping track of what happened, why you made decisions, and what comes next. The interface is in Russian.
 
-Works with local repositories, including private projects and projects without a Git remote. The interface is in Russian.
+## Current workflows
 
-## Get started
+- Discover local repositories and keep a project summary, goal, stage and focus.
+- Create numbered tasks, link one task to several projects, record results and inspect its history.
+- Save ideas and observations; read project decisions from their original files.
+- Track a question, external actions, evidence and a conclusion in a check.
+- Close or return a project. Closing cancels open tasks only when they have no other open project. Completed results and history stay available in the archive.
+- Review one or several projects, discuss the prepared context with Codex or use the OpenAI API, and explicitly accept useful proposals.
+- Enable separate opt-in weekly/monthly review schedules while the HTTP server is running.
 
-Install **JDK 25**, **Node.js 22.17+**, and **Git**, then run:
+Project pages show their purpose, tasks, history and latest meaningful review. Removing a project from this catalogue does not delete its repository.
+
+![Project overview](assets/screenshots/overview.png)
+![Tasks](assets/screenshots/tasks.png)
+![Project analysis](assets/screenshots/analysis.png)
+
+## Start
+
+Use JDK 25, Node.js 22.17+ and Git. From the checkout:
 
 ```sh
-git clone https://github.com/Dmitryaf/control-center.git
-cd control-center
 npm ci
-npm run dev
+npm run build
+npm start
 ```
 
-Open [localhost:4310](http://127.0.0.1:4310).
+Open [Projects Journal](http://127.0.0.1:4310), add project folders in Settings and scan them. [Setup](SETUP.md) covers the Windows shortcut and first connection. [Analysis](guides/ANALYSIS.md) covers context and consent; [maintenance](guides/MAINTENANCE.md) covers storage, recovery, architecture and checks.
 
-1. Open Settings and add your project folders, such as `C:/Personal`.
-2. Scan the folders and open a project.
-3. Set its status, current focus, and next step.
-4. Add tasks, ideas, decisions, and links between projects.
-
-Projects refresh on startup and when you click Refresh. Opening a project also updates its Git status.
-
-## Your data
-
-Everything stays on your computer. Settings and your entries are stored in `.data/control-center.sqlite`, which is excluded from Git. To back up your data, stop the app and copy the `.data` folder.
-
-Scanning only reads repositories. It does not change files or run project code.
-
-## Optional project summary
-
-Add a `PROJECT.yaml` file to a project, or create it from the interface:
-
-```yaml
-name: My Project
-type: product
-status: active
-current_focus: Prepare the first release
-next:
-  - Test the main workflow
-```
-
-Projects work without this file. Edits saved in Control Center take priority over YAML. Writing them back to `PROJECT.yaml` requires an explicit export.
-
-## Development
-
-Built with React, TypeScript, Vite, a local Java 25 and Spring Boot API, and SQLite. No accounts, cloud sync, GitHub integration, or AI services.
-
-```sh
-npm run check    # Lint, typecheck, tests, and production build
-npm start        # Run the built Java application locally
-```
-
-Browser tests: `npm run test:e2e` (requires Microsoft Edge).
+The application uses React, TypeScript, Java, Spring Boot and SQLite. It runs on loopback and stores data locally.

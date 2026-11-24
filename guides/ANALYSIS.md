@@ -1,0 +1,45 @@
+# Analysis and Codex
+
+Projects Journal prepares a bounded context for selected projects and a period, saves the resulting discussion, and lets the owner explicitly accept proposals. It does not execute project work from a model response.
+
+## Manual discussion
+
+Choose projects, dates and an optional question; leaving it empty uses the application default. Include the relevant categories of tasks/results, observations, checks, reviews and local decisions. Optional project history adds bounded background; it is not an event in the selected period. Inspect the prepared packet and exact prompt, then confirm dispatch. The interface shows execution stages and elapsed time and supports stopping an attempt.
+
+Each successful follow-up is a new saved report linked to its discussion. Previous reports remain available. A task or other record is created only by explicitly accepting a proposal; the original proposal and evidence stay separate from human approval.
+
+Opening a page does not read personal Codex chats or dispatch a question. A prepared packet is bound to the exact selection, source revisions, policy and provider/model. Changes can invalidate it; a pending manual packet expires after 15 minutes.
+
+## Providers
+
+**Codex** uses a separate CLI profile under the data directory. Device sign-in is explicit; credentials stay in CLI storage and are excluded from SQLite backup. Runtime execution is read-only, ephemeral and isolated from the main desktop profile. The application supplies the context; shell, browser, plugins and arbitrary file access are disabled for this path. Each question is bounded by input/output size and execution time. Default model means the CLI default, not a hardcoded model identity.
+
+**OpenAI API** uses the server's Responses adapter. Set `OPENAI_API_KEY` and `CONTROL_CENTER_OPENAI_MODEL` in the HTTP server environment before starting it. Requests have bounded context/output, no tools and no automatic retry. The two providers use independent configurations and grants.
+
+Model outputs and source excerpts require judgment. Structural validation and valid references do not establish the truth of a conclusion.
+
+## Files and prior Codex chats
+
+Repository context is optional and explicit: up to 12 selected tracked UTF-8 files, each up to 8 KB, within registered roots. Hidden/private/untracked files and symlinks are rejected; hash and revision guards detect changes before sending. Files are not automatically read from the README tree.
+
+Reading a previous Codex chat is a separate grant tied to project/worktree and purpose. The bounded app-server reader selects short excerpts, allows manual editing and saves a partial digest. It does not start a chat or fall back to reading the whole session archive. Changed source marks a digest stale until reviewed; a summary edit cannot silently reuse an old approval.
+
+Read permission and permission to send selected context are separate. Review the preview each time the selection or approval has changed.
+
+## Schedules
+
+Weekly and monthly schedules are independent opt-in settings. They identify scope, timezone, provider/model, sources and standing consent. Only closed periods are eligible; missed historical periods are not replayed. The HTTP process owns scheduling, so closing the browser keeps it alive but stopping the server stops dispatch.
+
+Unique period markers prevent automatic duplicates. An unknown previous result stops future dispatch until explicit resolution; it is not retried automatically. Revoked access, changed policy or stale guards fail closed. Reading new chat excerpts needs the corresponding separate grants.
+
+Verified restore disables grants in the backup copy. Renew them explicitly after recovery; an ordinary restart keeps current permissions.
+
+## Tasks from an assistant
+
+The optional stdio MCP server uses the same database and task/lifecycle services as HTTP. Use the same `CONTROL_CENTER_DATA_DIR` when overriding the default location. The tools cover journal queries and task changes within their documented scope. For the command and JAR path, see [Setup](../SETUP.md#development-and-mcp).
+
+## Implementation map
+
+Tasks can belong to several projects through `projectIds`; an empty array means no project. `projectId` remains a compatibility alias for the first project. Use `projectIds` to change a shared task's links. Its number, completion and result are shared across projects. Closing a project cancels a task only when none of its other projects remain open; removing a project detaches that link and preserves history. Selected analysis context includes a shared task once and includes only the selected project identities.
+
+In `backend/`, `PeriodContext` builds the context and `PeriodDispatch` handles OpenAI packets and dispatch. `ProposalAcceptanceService` persists proposal acceptance. `AnalysisScheduler` and `ScheduleGuard` own scheduled runs and consent checks. The `Codex` services handle bounded chat reads, repository context, CLI execution and discussion. `src/features/codex-analysis/` supplies the interface. Persistent discussion attempts use `analysis_runs` with immutable successful results, claims and leases.
