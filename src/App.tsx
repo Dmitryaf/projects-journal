@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { DraftProvider } from './shared/UnsavedChanges';
 import { useWorkspace, useActions } from './shared/workspace';
 import { api } from './shared/http';
+import { appName } from './shared/labels';
 import {
   LayoutDashboard,
   FolderOpen,
@@ -106,7 +107,7 @@ export default function App() {
       ? 'Архив проектов'
       : (pageTitles[route] ?? 'Обзор'));
   useLayoutEffect(() => {
-    document.title = `${pageTitle} · Control Center`;
+    document.title = `${pageTitle} · ${appName}`;
   }, [pageTitle]);
   const sections: Record<string, string> = {
     '/codex-analysis': '/analysis',
@@ -139,7 +140,7 @@ export default function App() {
           <span className="brand-mark" aria-hidden="true">
             <Notebook size={20} />
           </span>
-          <span>Control Center</span>
+          <span>{appName}</span>
         </Link>
         <button
           ref={menuToggle}

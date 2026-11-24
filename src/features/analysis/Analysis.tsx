@@ -312,8 +312,8 @@ export default function Analysis() {
                 <summary>Как подключить</summary>
                 <p>
                   Задайте <code>OPENAI_API_KEY</code> и <code>CONTROL_CENTER_OPENAI_MODEL</code>{' '}
-                  перед запуском Control Center, затем перезапустите сервер. Ключ не вводится в
-                  браузере и не сохраняется в базе.
+                  перед запуском приложения, затем перезапустите сервер. Ключ не вводится в браузере
+                  и не сохраняется в базе.
                 </p>
                 <button
                   disabled={working}

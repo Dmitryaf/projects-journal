@@ -186,7 +186,7 @@ export function Decisions() {
             </div>
             <h3>{d.title}</h3>
             <p className="section-label">
-              {d.projectId ? 'Локальное решение Control Center' : 'Общее решение экосистемы'}
+              {d.projectId ? 'Локальное решение дневника' : 'Общее решение экосистемы'}
             </p>
             <p className="muted preserve">{d.context}</p>
             <p className="preserve">{d.decision}</p>

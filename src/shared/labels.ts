@@ -1,3 +1,5 @@
+export const appName = 'Projects Journal';
+
 export const statusLabels = {
   active: 'Активный',
   paused: 'Отложен',

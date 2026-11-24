@@ -212,8 +212,8 @@ export default function CodexAnalysis() {
         <section className="panel" aria-label="Вход в Codex">
           <h2>Подключить Codex</h2>
           <p>
-            Войдите один раз в отдельный профиль Control Center. Личные диалоги, инструкции и память
-            основного Codex сюда не переносятся.
+            Войдите один раз в отдельный профиль Codex для приложения. Личные диалоги, инструкции и
+            память основного Codex сюда не переносятся.
           </p>
           {status.data.login?.state === 'starting' && <p role="status">Получение кода входа…</p>}
           {status.data.login?.state === 'waiting' && (

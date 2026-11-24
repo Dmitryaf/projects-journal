@@ -99,7 +99,7 @@ function MetadataEditor({ project, onClose }: { project: Project; onClose: () =>
             await refetch();
             throw error;
           }
-        }, 'Сводка сохранена в Control Center');
+        }, 'Сводка сохранена в дневнике');
         if (ok) onClose();
       })}
     >
@@ -265,7 +265,7 @@ export function DecisionFiles({
         Проектные решения из файлов <span className="count">{records.length}</span>
       </h2>
       <p className="help">
-        Источник истины — файл. Control Center только читает; изменения вносятся в исходный
+        Источник истины — файл. Приложение только читает файл; изменения вносятся в исходный
         документ.
       </p>
       <div className="timeline section-space">
@@ -417,7 +417,7 @@ function Context({ project }: { project: Project }) {
       project.context.privateContextPath &&
       next !== project.context.privateContextPath &&
       !confirm(
-        'Файлы не будут удалены. Control Center перестанет их индексировать.' +
+        'Файлы не будут удалены. Приложение перестанет их индексировать.' +
           (next ? ' Будет подключён новый каталог.' : ''),
       )
     )
@@ -494,8 +494,8 @@ function Context({ project }: { project: Project }) {
             <input {...register('privateContextPath')} disabled={busy} />
           </label>
           <p className="help">
-            Настройки хранятся только в SQLite. Control Center читает файлы; версионирование и
-            резервное хранение каталога настраиваете вы.
+            Настройки хранятся только в SQLite. Приложение читает файлы; версионирование и резервное
+            хранение каталога настраиваете вы.
           </p>
           <div className="row">
             <button disabled={busy}>Сохранить контекст</button>
@@ -617,7 +617,7 @@ function Maintenance({ project }: { project: Project }) {
                 <thead>
                   <tr>
                     <th>Поле</th>
-                    <th>Control Center</th>
+                    <th>Projects Journal</th>
                     <th>PROJECT.yaml сейчас</th>
                   </tr>
                 </thead>
@@ -659,11 +659,11 @@ function Maintenance({ project }: { project: Project }) {
               onClick={() =>
                 act(
                   () => api(`/projects/${project.id}/keep-local`, 'POST', hash),
-                  'Оставлена версия Control Center. Файл не изменён.',
+                  'Оставлена версия из дневника. Файл не изменён.',
                 )
               }
             >
-              Оставить версию Control Center
+              Оставить версию из дневника
             </button>
           </div>
         </section>
@@ -1046,7 +1046,7 @@ export default function ProjectDetail() {
                 Источник:{' '}
                 <strong>
                   {p.metadataSource === 'local'
-                    ? 'Control Center'
+                    ? 'Projects Journal'
                     : p.metadataSource === 'yaml'
                       ? 'PROJECT.yaml'
                       : 'Имя каталога'}
@@ -1054,7 +1054,7 @@ export default function ProjectDetail() {
               </p>
               <p className="help">
                 Экспорт записывает сводку и сохранённый прежний план в PROJECT.yaml. Задачи и
-                результаты остаются в Control Center. Неизвестные поля сохраняются.
+                результаты остаются в дневнике. Неизвестные поля сохраняются.
               </p>
               <div className="form">
                 <button

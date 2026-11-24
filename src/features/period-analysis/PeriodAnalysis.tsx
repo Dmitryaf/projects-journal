@@ -95,7 +95,7 @@ export function RunDetail({
         </p>
         <p className="help">
           {runtime
-            ? `Источник: Codex · запущен из Control Center · ${run.model === 'codex-default' ? 'модель по умолчанию CLI' : run.model}`
+            ? `Источник: Codex · запущен из приложения · ${run.model === 'codex-default' ? 'модель по умолчанию CLI' : run.model}`
             : manual
               ? 'Источник: Codex · внесён вручную; API-запрос не выполнялся'
               : `Модель: ${run.model || 'Не настроена'}`}{' '}

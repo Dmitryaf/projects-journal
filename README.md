@@ -1,4 +1,4 @@
-# Control Center
+# Projects Journal
 
 A local dashboard for your projects, tools, tasks, ideas, and decisions. See what is active, what needs attention, and what to do next.
 

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import type { Task, TaskInput, TaskHistoryPage } from '../../../shared/contracts';
-import { priorityLabels } from '../../shared/labels';
+import { appName, priorityLabels } from '../../shared/labels';
 import { api } from '../../shared/http';
 import { useActions, useWorkspace } from '../../shared/workspace';
 import { UnsavedChanges } from '../../shared/UnsavedChanges';
@@ -132,12 +132,12 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
   const panelHeading = useRef<HTMLHeadingElement>(null);
   const selected = w!.tasks.find((task) => task.id === selectedId);
   const panelTask = selected ?? editing ?? resultTask;
-  const taskTitle = panelTask ? `${panelTask.code} · ${panelTask.title} · Control Center` : null;
+  const taskTitle = panelTask ? `${panelTask.code} · ${panelTask.title} · ${appName}` : null;
   useEffect(() => {
     if (!taskTitle) return;
     document.title = taskTitle;
     return () => {
-      if (document.title === taskTitle) document.title = 'Задачи · Control Center';
+      if (document.title === taskTitle) document.title = `Задачи · ${appName}`;
     };
   }, [taskTitle]);
   useEffect(() => {

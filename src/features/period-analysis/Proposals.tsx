@@ -20,7 +20,7 @@ function Provenance({ value }: { value: ProposalAcceptance['original'] }) {
       <p>Дешёвая проверка: {p.cheapCheck}</p>
       <p className="help">
         {value.origin === 'codex_runtime'
-          ? 'Codex · Control Center'
+          ? 'Codex · Projects Journal'
           : value.origin === 'codex_manual'
             ? 'Codex · внесён вручную'
             : `Модель ${value.model}`}{' '}

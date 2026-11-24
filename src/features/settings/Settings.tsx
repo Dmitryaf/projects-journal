@@ -98,7 +98,7 @@ export default function Settings() {
           </label>
         </details>
         <details>
-          <summary>Проекты, удалённые из Control Center</summary>
+          <summary>Проекты, удалённые из дневника</summary>
           <label className="section-space">
             Исключённые пути проектов, каждый с новой строки
             <textarea rows={3} {...register('excludedProjectPaths')} />
