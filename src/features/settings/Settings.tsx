@@ -19,6 +19,7 @@ const formValues = (settings: SettingsData): Fields => ({
 });
 export default function Settings() {
   const { data: workspace } = useWorkspace();
+  const settings = workspace!.settings;
   const { act, busy } = useActions();
   const {
     register,
@@ -26,12 +27,12 @@ export default function Settings() {
     reset,
     getValues,
     formState: { isDirty },
-  } = useForm<Fields>({ defaultValues: formValues(workspace!.settings) });
+  } = useForm<Fields>({ defaultValues: formValues(settings) });
   const [backupPath, setBackupPath] = useState('');
   const [validation, setValidation] = useState('');
   useEffect(() => {
-    if (!isDirty) reset(formValues(workspace!.settings));
-  }, [workspace, isDirty, reset]);
+    if (!isDirty) reset(formValues(settings));
+  }, [settings, isDirty, reset]);
   async function save(values: Fields) {
     const parsed = settingsSchema.safeParse({
       ...values,
