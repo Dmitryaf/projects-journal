@@ -26,32 +26,60 @@ import { ProjectLifecycle, type LifecycleAction } from './ProjectLifecycle';
 import { isClosedProject } from '../../../shared/project-lifecycle';
 import { Plus, NotebookPen } from 'lucide-react';
 
+function metadataFields(project: Project) {
+  return {
+    ...project.metadata,
+    notes: project.notes,
+    blocked: project.metadata.blocked_by.join('\n'),
+    relatedText: project.metadata.related.join('\n'),
+  };
+}
+
+const metadataFieldLabels: Partial<Record<keyof ReturnType<typeof metadataFields>, string>> = {
+  name: 'Название',
+  status: 'Статус',
+  stage: 'Этап',
+  goal: 'Цель',
+  blocked: 'Блокировки',
+  type: 'Тип',
+  priority: 'Приоритет',
+  last_reviewed: 'Дата пересмотра',
+  relatedText: 'Связанные имена',
+  notes: 'Заметки',
+};
+
 function MetadataEditor({ project, onClose }: { project: Project; onClose: () => void }) {
   const { act, busy } = useActions();
-  const { data: workspace } = useWorkspace();
-  const [expectedHash] = useState(project.snapshot.yaml.hash);
-  const [expectedLifecycleRevision] = useState(project.lifecycle?.revision ?? 0);
+  const { data: workspace, refetch } = useWorkspace();
+  const [base, setBase] = useState(project);
   const {
     register,
     handleSubmit,
     setValue,
-    formState: { isDirty },
+    reset,
+    formState: { isDirty, dirtyFields },
   } = useForm<Metadata & { notes: string; blocked: string; relatedText: string }>({
-    defaultValues: {
-      ...project.metadata,
-      notes: project.notes,
-      blocked: project.metadata.blocked_by.join('\n'),
-      relatedText: project.metadata.related.join('\n'),
-    },
+    defaultValues: metadataFields(project),
   });
+  const fresh = metadataFields(project);
+  const original = metadataFields(base);
+  const changedFields = (Object.keys(dirtyFields) as (keyof typeof fresh)[]).filter(
+    (field) => original[field] !== fresh[field],
+  );
+  const yamlChanged = project.snapshot.yaml.hash !== base.snapshot.yaml.hash;
+  const stale =
+    project.metadataVersion !== base.metadataVersion ||
+    yamlChanged ||
+    project.lifecycle?.revision !== base.lifecycle?.revision;
   return (
     <form
       className="panel form section-space"
       onSubmit={handleSubmit(async (v) => {
+        if (stale) return;
         const { notes, blocked, relatedText, ...metadata } = v;
-        const ok = await act(
-          () =>
-            api(`/projects/${project.id}`, 'PUT', {
+        const ok = await act(async () => {
+          try {
+            return await api(`/projects/${project.id}`, 'PUT', {
               metadata: {
                 ...metadata,
                 current_focus: undefined,
@@ -61,11 +89,15 @@ function MetadataEditor({ project, onClose }: { project: Project; onClose: () =>
                 last_reviewed: metadata.last_reviewed || null,
               },
               notes,
-              expectedHash,
-              expectedLifecycleRevision,
-            }),
-          'Сводка сохранена в Control Center',
-        );
+              expectedHash: base.snapshot.yaml.hash,
+              expectedLifecycleRevision: base.lifecycle?.revision ?? 0,
+              expectedMetadataVersion: base.metadataVersion,
+            });
+          } catch (error) {
+            await refetch();
+            throw error;
+          }
+        }, 'Сводка сохранена в Control Center');
         if (ok) onClose();
       })}
     >
@@ -75,6 +107,35 @@ function MetadataEditor({ project, onClose }: { project: Project; onClose: () =>
         Проверьте цель, этап и ограничения. Последняя проверка:{' '}
         {date(project.metadata.last_reviewed)}.
       </p>
+      {stale && (
+        <div className="message warning" role="status">
+          <p>
+            {yamlChanged
+              ? 'PROJECT.yaml изменился после открытия формы. Сверьте версии сводки, прежде чем продолжить.'
+              : 'Сводка изменилась после открытия формы. Сверьте сохранённые значения перед повторным сохранением.'}
+          </p>
+          {changedFields.length > 0 && (
+            <dl>
+              {changedFields.map((field) => (
+                <div key={field}>
+                  <dt>{metadataFieldLabels[field] ?? field}</dt>
+                  <dd className="preserve">{String(fresh[field] ?? '') || 'Пусто'}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              reset(fresh, { keepDirtyValues: true });
+              setBase(project);
+            }}
+          >
+            Обновить сводку, сохранив мой ввод
+          </button>
+        </div>
+      )}
       <div className="form-grid">
         <label>
           Название
@@ -149,12 +210,12 @@ function MetadataEditor({ project, onClose }: { project: Project; onClose: () =>
         </div>
       </details>
       <div className="row">
-        <button className="primary" disabled={busy}>
+        <button className="primary" disabled={busy || stale}>
           Сохранить сводку
         </button>
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || stale}
           onClick={(event) => {
             setValue('last_reviewed', dateInZone(new Date(), workspace!.settings.timezone), {
               shouldDirty: true,
@@ -633,6 +694,7 @@ export default function ProjectDetail() {
         api(`/projects/${p.id}/${suffix}`, 'POST', {
           expectedHash: p.snapshot.yaml.hash,
           expectedLifecycleRevision: p.lifecycle?.revision ?? 0,
+          expectedMetadataVersion: p.metadataVersion,
         }),
       message,
     );

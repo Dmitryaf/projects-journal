@@ -193,6 +193,7 @@ export interface Project {
   snapshot: Snapshot;
   metadata: Metadata;
   metadataSource: 'local' | 'yaml' | 'defaults';
+  metadataVersion?: string;
   notes: string;
   available: boolean;
   signals: Signal[];

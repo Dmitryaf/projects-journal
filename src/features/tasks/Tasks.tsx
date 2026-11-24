@@ -26,14 +26,19 @@ const taskDraft = (t: Task): Draft => ({
 });
 function ResultEditor({
   task,
+  latest,
   onClose,
   onDirty,
 }: {
   task: Task;
+  latest: Task | undefined;
   onClose: () => void;
   onDirty: (dirty: boolean) => void;
 }) {
   const { act, busy } = useActions();
+  const { refetch } = useWorkspace();
+  const [base, setBase] = useState(task);
+  const stale = latest && latest.revision !== base.revision;
   const {
     register,
     handleSubmit,
@@ -51,14 +56,17 @@ function ResultEditor({
       className="panel form section-space"
       aria-label={`Итог ${task.code}`}
       onSubmit={handleSubmit(async ({ summary }) => {
-        const ok = await act(
-          () =>
-            api(`/tasks/${task.id}`, 'PUT', {
-              ...task,
-              result: { ...task.result, summary: summary.trim() },
-            }),
-          'Итог сохранён',
-        );
+        const ok = await act(async () => {
+          try {
+            return await api(`/tasks/${task.id}`, 'PUT', {
+              ...base,
+              result: { ...base.result, summary: summary.trim() },
+            });
+          } catch (error) {
+            await refetch();
+            throw error;
+          }
+        }, 'Итог сохранён');
         if (ok && getValues('summary') === summary) onClose();
       })}
     >
@@ -70,8 +78,23 @@ function ResultEditor({
         Итог работы
         <textarea autoFocus required maxLength={10000} rows={3} {...register('summary')} />
       </label>
+      {stale && (
+        <div className="message warning" role="status">
+          <p>
+            {latest.result?.summary !== base.result?.summary
+              ? 'Другой клиент изменил сохранённый итог.'
+              : 'Другой клиент изменил задачу. Ваш черновик на месте.'}
+          </p>
+          {latest.result?.summary !== base.result?.summary && (
+            <p className="preserve">Сохранённый итог: {latest.result?.summary || 'пусто'}</p>
+          )}
+          <button type="button" disabled={busy} onClick={() => setBase(latest)}>
+            Использовать текущую версию задачи
+          </button>
+        </div>
+      )}
       <div className="row">
-        <button className="primary" disabled={busy}>
+        <button className="primary" disabled={busy || !latest}>
           Сохранить итог
         </button>
         <button
@@ -214,7 +237,14 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
   }
   async function removeTask(t: Task) {
     if (!canDiscard() || !confirm(`Удалить «${t.title}»?`)) return;
-    const ok = await act(() => api(`/tasks/${t.id}`, 'DELETE'), 'Запись удалена');
+    const ok = await act(async () => {
+      try {
+        return await api(`/tasks/${t.id}`, 'DELETE', { revision: t.revision });
+      } catch (error) {
+        await refetch();
+        throw error;
+      }
+    }, 'Запись удалена');
     if (ok && selectedId === t.id) {
       clear();
       setResultTask(null);
@@ -553,6 +583,7 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
                   <ResultEditor
                     key={resultTask.id}
                     task={resultTask}
+                    latest={selected}
                     onDirty={setResultDirty}
                     onClose={() => {
                       setResultTask(null);
