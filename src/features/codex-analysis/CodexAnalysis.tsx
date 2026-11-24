@@ -266,7 +266,19 @@ export default function CodexAnalysis() {
               Отменить вход
             </button>
           )}
-          <button disabled={busy} onClick={() => void status.refetch()}>
+          <button
+            disabled={busy}
+            onClick={() =>
+              void action(async () => {
+                const queryKey = ['codex-execution-status'];
+                await client.cancelQueries({ queryKey });
+                const current = await api<CodexExecutionStatus>(
+                  '/codex-analysis/status?refresh=true',
+                );
+                client.setQueryData(queryKey, current);
+              })
+            }
+          >
             Проверить вход
           </button>
         </section>
