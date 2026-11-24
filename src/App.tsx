@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { DraftProvider } from './shared/UnsavedChanges';
 import { useWorkspace, useActions } from './shared/workspace';
@@ -15,6 +15,28 @@ import {
   RefreshCw,
   Settings,
 } from 'lucide-react';
+
+const pageTitles: Record<string, string> = {
+  '/': 'Обзор',
+  '/projects': 'Проекты',
+  '/tasks': 'Задачи',
+  '/timeline': 'История',
+  '/history': 'История задач',
+  '/project-lifecycle': 'История проекта',
+  '/observations': 'Наблюдения',
+  '/reviews': 'Обзоры периодов',
+  '/analysis': 'Анализ проектов',
+  '/period-analysis': 'Анализ периода',
+  '/codex-analysis': 'Обсуждение с Codex',
+  '/analysis-schedules': 'Расписания анализа',
+  '/period-proposal': 'Предложение анализа',
+  '/proposal-acceptances': 'Принятые предложения',
+  '/codex-context': 'Контекст Codex',
+  '/settings': 'Настройки',
+  '/ideas': 'Идеи',
+  '/decisions': 'Решения',
+  '/checks': 'Проверки',
+};
 
 export default function App() {
   const query = useWorkspace();
@@ -68,7 +90,24 @@ export default function App() {
     window.addEventListener('focus', refresh);
     return () => window.removeEventListener('focus', refresh);
   }, [client, busy]);
-  const route = '/' + location.pathname.split('/')[1];
+  const [, section, id] = location.pathname.split('/');
+  const route = '/' + section;
+  const recordTitle =
+    route === '/projects'
+      ? workspace?.projects.find((project) => project.id === id)?.metadata.name
+      : route === '/ideas'
+        ? workspace?.ideas.find((idea) => idea.id === id)?.title
+        : route === '/checks'
+          ? workspace?.checks.find((check) => check.id === id)?.title
+          : undefined;
+  const pageTitle =
+    recordTitle ??
+    (route === '/projects' && new URLSearchParams(location.search).get('status') === 'closed'
+      ? 'Архив проектов'
+      : (pageTitles[route] ?? 'Обзор'));
+  useLayoutEffect(() => {
+    document.title = `${pageTitle} · Control Center`;
+  }, [pageTitle]);
   const sections: Record<string, string> = {
     '/codex-analysis': '/analysis',
     '/period-analysis': '/analysis',

@@ -17,10 +17,12 @@ import { TaskDetails } from './TaskDetails';
 import './tasks.css';
 
 type Draft = Pick<TaskInput, 'title' | 'projectId' | 'projectIds' | 'priority' | 'description'>;
+const generalFilter = '__general__';
+const sharedFilter = '__shared__';
 const taskDraft = (t: Task): Draft => ({
   title: t.title,
   projectId: t.projectId,
-  projectIds: taskProjectIds(t).filter((id) => id !== t.projectId),
+  projectIds: taskProjectIds(t),
   priority: t.priority,
   description: t.description,
 });
@@ -118,7 +120,10 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
   const { act, busy } = useActions();
   const [details, setDetails] = useState(false);
   const [filter, setFilter] = useState(params.get('project') || '');
-  const [outcome, setOutcome] = useState<'open' | 'done' | 'cancelled'>('open');
+  const initialOutcome = params.get('outcome');
+  const [outcome, setOutcome] = useState<'open' | 'done' | 'cancelled'>(
+    initialOutcome === 'done' || initialOutcome === 'cancelled' ? initialOutcome : 'open',
+  );
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Task | null>(null);
   const [resultTask, setResultTask] = useState<Task | null>(null);
@@ -127,17 +132,31 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
   const panelHeading = useRef<HTMLHeadingElement>(null);
   const selected = w!.tasks.find((task) => task.id === selectedId);
   const panelTask = selected ?? editing ?? resultTask;
+  const taskTitle = panelTask ? `${panelTask.code} · ${panelTask.title} · Control Center` : null;
+  useEffect(() => {
+    if (!taskTitle) return;
+    document.title = taskTitle;
+    return () => {
+      if (document.title === taskTitle) document.title = 'Задачи · Control Center';
+    };
+  }, [taskTitle]);
   useEffect(() => {
     if (selectedId && !resultTask) panelHeading.current?.focus();
   }, [selectedId, resultTask]);
   const requestKey = useRef(crypto.randomUUID());
-  const empty = (project = filter): Draft => ({
-    title: '',
-    description: '',
-    projectIds: [],
-    projectId: project === '__general__' ? null : project || null,
-    priority: 'normal',
-  });
+  const projects = w!.projects;
+  const names = new Map(projects.map((project) => [project.id, project.metadata.name]));
+  const hasProject = (id: string) => names.has(id);
+  const empty = (project = filter): Draft => {
+    const projectId = hasProject(project) ? project : null;
+    return {
+      title: '',
+      description: '',
+      projectIds: projectId ? [projectId] : [],
+      projectId,
+      priority: 'normal',
+    };
+  };
   const {
     register,
     handleSubmit,
@@ -200,14 +219,13 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
     requestKey.current = crypto.randomUUID();
   }
   async function save(v: Draft) {
+    const projectIds = w!.storage.taskProjects ? (v.projectIds ?? []) : undefined;
     const ok = await act(async () => {
       const input = {
         ...editing,
         ...v,
-        projectId: v.projectId || null,
-        projectIds: w!.storage.taskProjects
-          ? [...new Set([...(v.projectId ? [v.projectId] : []), ...(v.projectIds ?? [])])]
-          : undefined,
+        projectId: projectIds ? (projectIds[0] ?? null) : v.projectId || null,
+        projectIds,
       };
       if (!editing) return api('/tasks', 'POST', { ...input, requestKey: requestKey.current });
       try {
@@ -225,7 +243,11 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
       requestAnimationFrame(() => panelHeading.current?.focus());
       return;
     }
-    const nextFilter = v.projectId || v.projectIds?.[0] || '__general__';
+    const nextFilter = projectIds
+      ? projectIds.includes(filter)
+        ? filter
+        : (projectIds[0] ?? generalFilter)
+      : v.projectId || generalFilter;
     setSelectedId(null);
     setFilter(nextFilter);
     setOutcome('open');
@@ -282,7 +304,10 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
   const items = w!.tasks
     .filter(
       (t) =>
-        (!filter || taskInProject(t, filter === '__general__' ? null : filter)) &&
+        (!filter ||
+          (filter === sharedFilter
+            ? taskProjectIds(t).length > 1
+            : taskInProject(t, filter === generalFilter ? null : filter))) &&
         taskOutcome(t) === outcome &&
         `${t.code} ${t.title} ${t.description}`
           .toLocaleLowerCase('ru')
@@ -293,16 +318,19 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
         ({ high: 0, normal: 1, low: 2 })[a.priority] - { high: 0, normal: 1, low: 2 }[b.priority] ||
         b.number - a.number,
     );
-  const projects = w!.projects;
-  const names = new Map(projects.map((p) => [p.id, p.metadata.name]));
   const groups = new Map<string | null, Task[]>();
   for (const task of items) {
-    const groupId = filter && filter !== '__general__' ? filter : task.projectId;
+    const groupId = hasProject(filter)
+      ? filter
+      : taskProjectIds(task).length > 1
+        ? sharedFilter
+        : task.projectId;
     const group = groups.get(groupId);
     if (group) group.push(task);
     else groups.set(groupId, [task]);
   }
   const sortedGroups = [...groups].sort(([a], [b]) => {
+    if (a === sharedFilter || b === sharedFilter) return a === sharedFilter ? -1 : 1;
     if (!a || !b) return a ? -1 : b ? 1 : 0;
     return (names.get(a) ?? '').localeCompare(names.get(b) ?? '', 'ru');
   });
@@ -316,7 +344,15 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
     </option>
   ));
   const draftProjectId = watch('projectId');
-  const additionalProjectIds = watch('projectIds') ?? [];
+  const selectedProjects = watch('projectIds') ?? [];
+  const destination = w!.storage.taskProjects
+    ? selectedProjects
+        .map((id) => names.get(id))
+        .filter(Boolean)
+        .join(' · ')
+    : draftProjectId
+      ? names.get(draftProjectId)
+      : undefined;
   const composer = (
     <form
       className="task-composer"
@@ -358,38 +394,42 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
       </div>
       {details ? (
         <div className="form-grid task-fields" id="task-fields">
-          <label>
-            Проект
-            <select {...register('projectId')}>
-              <option value="">Без проекта</option>
-              {options}
-            </select>
-          </label>
-          {w!.storage.taskProjects && (
+          {w!.storage.taskProjects ? (
             <fieldset className="task-project-options wide">
-              <legend>Ещё проекты для этой задачи</legend>
-              <p className="help">Один номер и результат для всех выбранных проектов.</p>
-              {projects
-                .filter((project) => project.id !== draftProjectId)
-                .map((project) => (
-                  <label className="checkbox" key={project.id}>
+              <legend>Проекты задачи</legend>
+              <p className="help">
+                Один номер и результат для всех выбранных проектов. Без выбора задача останется
+                общей.
+              </p>
+              <div className="task-project-choices">
+                {projects.map((project) => (
+                  <label key={project.id}>
                     <input
                       type="checkbox"
-                      checked={additionalProjectIds.includes(project.id)}
+                      checked={selectedProjects.includes(project.id)}
                       onChange={(event) =>
                         setValue(
                           'projectIds',
                           event.target.checked
-                            ? [...additionalProjectIds, project.id]
-                            : additionalProjectIds.filter((id) => id !== project.id),
+                            ? [...selectedProjects, project.id]
+                            : selectedProjects.filter((id) => id !== project.id),
                           { shouldDirty: true },
                         )
                       }
                     />
-                    {project.metadata.name}
+                    <span>{project.metadata.name}</span>
                   </label>
                 ))}
+              </div>
             </fieldset>
+          ) : (
+            <label>
+              Проект
+              <select {...register('projectId')}>
+                <option value="">Без проекта</option>
+                {options}
+              </select>
+            </label>
           )}
           <label>
             Приоритет
@@ -420,10 +460,8 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
           )}
         </div>
       ) : (
-        (isDirty || (filter && filter !== '__general__')) && (
-          <small className="task-destination">
-            Новая задача · {draftProjectId ? names.get(draftProjectId) : 'Без проекта'}
-          </small>
+        (isDirty || hasProject(filter)) && (
+          <small className="task-destination">Новая задача · {destination || 'Без проекта'}</small>
         )
       )}
     </form>
@@ -452,7 +490,8 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
               onChange={(e) => changeFilter(e.target.value)}
             >
               <option value="">Все проекты</option>
-              <option value="__general__">Без проекта</option>
+              <option value={generalFilter}>Без проекта</option>
+              {w!.storage.taskProjects && <option value={sharedFilter}>Несколько проектов</option>}
               {options}
             </select>
           </label>
@@ -486,29 +525,33 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
             <div className="task-group" key={projectId ?? 'general'}>
               <div className="task-group-heading">
                 <h2>
-                  {projectId ? (
+                  {projectId === sharedFilter ? (
+                    'Несколько проектов'
+                  ) : projectId ? (
                     <Link to={`/projects/${projectId}`}>{names.get(projectId) ?? 'Проект'}</Link>
                   ) : (
                     'Без проекта'
                   )}
                 </h2>
                 <span className="count">{tasks.length}</span>
-                <button
-                  type="button"
-                  className="task-icon"
-                  aria-label={`Добавить задачу: ${projectId ? (names.get(projectId) ?? 'Проект') : 'Без проекта'}`}
-                  onClick={() => {
-                    if (!canDiscard()) return;
-                    const next = projectId ?? '__general__';
-                    setSelectedId(null);
-                    setResultTask(null);
-                    setFilter(next);
-                    clear(next);
-                    requestAnimationFrame(() => setFocus('title'));
-                  }}
-                >
-                  <Plus size={16} aria-hidden="true" />
-                </button>
+                {projectId !== sharedFilter && (
+                  <button
+                    type="button"
+                    className="task-icon"
+                    aria-label={`Добавить задачу: ${projectId ? (names.get(projectId) ?? 'Проект') : 'Без проекта'}`}
+                    onClick={() => {
+                      if (!canDiscard()) return;
+                      const next = projectId ?? generalFilter;
+                      setSelectedId(null);
+                      setResultTask(null);
+                      setFilter(next);
+                      clear(next);
+                      requestAnimationFrame(() => setFocus('title'));
+                    }}
+                  >
+                    <Plus size={16} aria-hidden="true" />
+                  </button>
+                )}
               </div>
               {tasks.slice(0, filter || search.trim() ? undefined : 4).map((t) => (
                 <TaskRow
@@ -534,9 +577,12 @@ function TaskWorkspace({ params }: { params: URLSearchParams }) {
                 <button
                   className="task-show-all"
                   type="button"
-                  onClick={() => changeFilter(projectId ?? '__general__')}
+                  onClick={() => changeFilter(projectId ?? generalFilter)}
                 >
-                  Все задачи проекта ({tasks.length}) →
+                  {projectId === sharedFilter
+                    ? 'Все задачи с несколькими проектами'
+                    : 'Все задачи проекта'}{' '}
+                  ({tasks.length}) →
                 </button>
               )}
             </div>

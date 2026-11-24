@@ -55,6 +55,34 @@
 .task-fields > button {
   justify-self: start;
 }
+.task-project-options {
+  min-width: 0;
+  margin: 0;
+  padding: 0 12px 8px;
+  border: 1px solid var(--task-rule);
+  border-radius: 6px;
+}
+.task-project-choices {
+  max-height: 18rem;
+  overflow-y: auto;
+}
+.task-project-choices > label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 6px 3px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.task-project-choices > label + label {
+  border-top: 1px solid var(--task-rule);
+}
+.task-project-choices input {
+  width: auto;
+  margin: 0;
+}
 .task-destination {
   display: block;
   margin-top: 5px;
@@ -375,6 +403,10 @@
   width: 36px;
 }
 @media (max-width: 1050px) {
+  .task-desk:has(.task-workspace.has-detail)
+    > :is(.task-create, .task-filters, .task-search-input) {
+    display: none;
+  }
   .task-workspace.has-detail {
     grid-template-columns: 1fr;
   }
