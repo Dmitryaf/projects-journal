@@ -201,6 +201,12 @@
   font-size: 0.9rem;
   cursor: pointer;
 }
+.shell
+  :is(.project-latest, .overview-details, .catalog-diagnostics, .settings-form details)
+  > summary {
+  min-height: 28px;
+  padding-block: 4px;
+}
 .shell .attention-queue {
   border-top: 0;
   margin-top: 32px;

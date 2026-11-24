@@ -148,6 +148,7 @@ main {
   color: var(--ink);
 }
 .attention-line small {
+  color: #595947;
   display: block;
   font-weight: 400;
 }
@@ -499,11 +500,7 @@ main {
 }
 .signal-reasons {
   margin: 0;
-  padding-left: 16px;
   font-size: 13px;
-}
-.signal-reasons li {
-  padding: 2px 0;
 }
 @media (max-width: 800px) {
   .signal-reasons {

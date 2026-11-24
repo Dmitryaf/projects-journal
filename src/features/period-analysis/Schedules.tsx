@@ -443,34 +443,37 @@ export default function Schedules() {
         </>
       ) : (
         <>
-          <p>
-            Создайте или включите расписание внутри{' '}
-            <Link to="/reviews">обзора недели или месяца</Link>. Новые проекты и виды источников
-            требуют нового выбора.
-          </p>
           <Link to="/timeline?kind=ai_analysis">Все сохранённые запуски →</Link>
           {query.error && <p role="alert">{query.error.message}</p>}
           {query.isPending && <p role="status">Загружаем расписания…</p>}
           {query.data?.items.length === 0 && (
-            <p>Расписаний нет. Автоматическая отправка выключена.</p>
+            <div className="panel section-space prose">
+              <h2>Расписаний пока нет</h2>
+              <p>Чтобы настроить автоматический разбор, откройте обзор недели или месяца.</p>
+              <Link className="button primary" to="/reviews">
+                Открыть обзор периода
+              </Link>
+            </div>
           )}
           {query.data?.items.map((value) => (
             <ScheduleCard key={value.id} value={value} />
           ))}
-          <div className="row">
-            <button
-              disabled={cursors.length === 1 || query.isFetching}
-              onClick={() => setCursors(cursors.slice(0, -1))}
-            >
-              Предыдущие
-            </button>
-            <button
-              disabled={!query.data?.nextCursor || query.isFetching}
-              onClick={() => setCursors([...cursors, query.data!.nextCursor])}
-            >
-              Следующие
-            </button>
-          </div>
+          {(cursors.length > 1 || query.data?.nextCursor) && (
+            <div className="row">
+              <button
+                disabled={cursors.length === 1 || query.isFetching}
+                onClick={() => setCursors(cursors.slice(0, -1))}
+              >
+                Предыдущие
+              </button>
+              <button
+                disabled={!query.data?.nextCursor || query.isFetching}
+                onClick={() => setCursors([...cursors, query.data!.nextCursor])}
+              >
+                Следующие
+              </button>
+            </div>
+          )}
         </>
       )}
     </>

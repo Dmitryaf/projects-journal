@@ -88,10 +88,17 @@ export default function Overview() {
   ]
     .map((v) => ({
       ...v,
-      signals: v.signals.filter((s) => s.level !== 'info' && s.code !== 'review'),
-      level: v.signals.some((s) => s.level === 'decision') ? 'decision' : 'attention',
+      signals: v.signals
+        .filter((s) => s.level !== 'info' && (s.code !== 'review' || v.kind === 'Проверка'))
+        .sort(
+          (a, b) =>
+            Number(b.level === 'decision') - Number(a.level === 'decision') ||
+            Number(b.code === 'private-context-unavailable') -
+              Number(a.code === 'private-context-unavailable'),
+        ),
     }))
     .filter((v) => v.signals.length)
+    .map((v) => ({ ...v, level: v.signals[0]!.level === 'decision' ? 'decision' : 'attention' }))
     .sort((a, b) => Number(b.level === 'decision') - Number(a.level === 'decision'));
   const openTasks = w!.tasks
     .filter((t) => isTaskOpen(t))
@@ -165,11 +172,7 @@ export default function Overview() {
               <small>{item.kind}</small>
               {item.title}
             </Link>
-            <ul className="signal-reasons">
-              {item.signals.map((s, i) => (
-                <li key={i}>{s.message}</li>
-              ))}
-            </ul>
+            <p className="signal-reasons">{item.signals[0]!.message}</p>
           </div>
         ))}
         {!attention.length && <p className="empty">По доступным данным сигналов нет.</p>}
