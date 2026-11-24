@@ -15,11 +15,15 @@
     "dev:java": "node scripts/java-runtime.js dev",
     "start:java": "node scripts/java-runtime.js start",
     "mcp:java": "node scripts/java-runtime.js mcp",
+    "eval:period": "tsx scripts/evaluate-period-analysis.ts",
     "test:react": "vitest run --config vitest.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint . && tsx scripts/check-boundaries.ts",
+    "test": "tsx --test tests/*.test.ts tests/java/*.test.ts",
+    "test:java-compatibility": "tsx --test tests/java/*.test.ts",
+    "test:e2e": "playwright test",
+    "test:production": "tsx scripts/smoke-production.ts",
     "format": "prettier --write src shared scripts tests *.json *.ts *.js index.html README.md",
-    "test": "tsx --test tests/boundaries.test.ts",
     "check": "npm run lint && npm run typecheck && npm run test:react && npm run build && npm test"
   },
   "dependencies": {
