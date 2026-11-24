@@ -1,53 +1,82 @@
 import { createRoot } from 'react-dom/client';
+import type { ComponentType } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ActionProvider } from './shared/workspace';
 import App from './App';
-import Settings from './features/settings/Settings';
-import Projects from './features/projects/Projects';
-import ProjectDetail from './features/projects/ProjectDetail';
-import ProjectLifecycleHistory from './features/projects/ProjectLifecycleHistory';
 import Overview from './features/overview/Overview';
-import Tasks, { TaskHistory } from './features/tasks/Tasks';
-import Checks, { CheckDetail } from './features/checks/Checks';
-import { Decisions } from './features/records/Records';
-import Ideas from './features/records/Ideas';
-import Analysis from './features/analysis/Analysis';
-import History from './features/history/History';
-import Observations from './features/observations/Observations';
-import Reviews from './features/reviews/Reviews';
-import CodexContext from './features/codex-context/CodexContext';
-import Acceptances, { Proposal } from './features/period-analysis/Proposals';
-import Schedules from './features/period-analysis/Schedules';
-import PeriodAnalysis from './features/period-analysis/PeriodAnalysis';
-import CodexAnalysis from './features/codex-analysis/CodexAnalysis';
 import './style.css';
 import './styles/components.css';
+
+const loadPage = (load: () => Promise<{ default: ComponentType }>) => async () => ({
+  Component: (await load()).default,
+});
+
 const router = createBrowserRouter([
   {
     element: <App />,
+    hydrateFallbackElement: (
+      <main>
+        <p role="status">Загружаем рабочее пространство…</p>
+      </main>
+    ),
     children: [
       { path: '/', element: <Overview /> },
-      { path: '/projects', element: <Projects /> },
-      { path: '/projects/:id', element: <ProjectDetail /> },
-      { path: '/project-lifecycle/:id', element: <ProjectLifecycleHistory /> },
-      { path: '/tasks', element: <Tasks /> },
-      { path: '/history', element: <TaskHistory /> },
-      { path: '/timeline', element: <History /> },
-      { path: '/observations', element: <Observations /> },
-      { path: '/reviews', element: <Reviews /> },
-      { path: '/period-analysis', element: <PeriodAnalysis /> },
-      { path: '/analysis-schedules', element: <Schedules /> },
-      { path: '/period-proposal', element: <Proposal /> },
-      { path: '/codex-context', element: <CodexContext /> },
-      { path: '/proposal-acceptances', element: <Acceptances /> },
-      { path: '/checks', element: <Checks /> },
-      { path: '/checks/:id', element: <CheckDetail /> },
-      { path: '/ideas/:id?', element: <Ideas /> },
-      { path: '/decisions', element: <Decisions /> },
-      { path: '/analysis', element: <Analysis /> },
-      { path: '/codex-analysis', element: <CodexAnalysis /> },
-      { path: '/settings', element: <Settings /> },
+      { path: '/projects', lazy: loadPage(() => import('./features/projects/Projects')) },
+      { path: '/projects/:id', lazy: loadPage(() => import('./features/projects/ProjectDetail')) },
+      {
+        path: '/project-lifecycle/:id',
+        lazy: loadPage(() => import('./features/projects/ProjectLifecycleHistory')),
+      },
+      { path: '/tasks', lazy: loadPage(() => import('./features/tasks/Tasks')) },
+      {
+        path: '/history',
+        lazy: async () => ({ Component: (await import('./features/tasks/Tasks')).TaskHistory }),
+      },
+      { path: '/timeline', lazy: loadPage(() => import('./features/history/History')) },
+      {
+        path: '/observations',
+        lazy: loadPage(() => import('./features/observations/Observations')),
+      },
+      { path: '/reviews', lazy: loadPage(() => import('./features/reviews/Reviews')) },
+      {
+        path: '/period-analysis',
+        lazy: loadPage(() => import('./features/period-analysis/PeriodAnalysis')),
+      },
+      {
+        path: '/analysis-schedules',
+        lazy: loadPage(() => import('./features/period-analysis/Schedules')),
+      },
+      {
+        path: '/period-proposal',
+        lazy: async () => ({
+          Component: (await import('./features/period-analysis/Proposals')).Proposal,
+        }),
+      },
+      {
+        path: '/codex-context',
+        lazy: loadPage(() => import('./features/codex-context/CodexContext')),
+      },
+      {
+        path: '/proposal-acceptances',
+        lazy: loadPage(() => import('./features/period-analysis/Proposals')),
+      },
+      { path: '/checks', lazy: loadPage(() => import('./features/checks/Checks')) },
+      {
+        path: '/checks/:id',
+        lazy: async () => ({ Component: (await import('./features/checks/Checks')).CheckDetail }),
+      },
+      { path: '/ideas/:id?', lazy: loadPage(() => import('./features/records/Ideas')) },
+      {
+        path: '/decisions',
+        lazy: async () => ({ Component: (await import('./features/records/Records')).Decisions }),
+      },
+      { path: '/analysis', lazy: loadPage(() => import('./features/analysis/Analysis')) },
+      {
+        path: '/codex-analysis',
+        lazy: loadPage(() => import('./features/codex-analysis/CodexAnalysis')),
+      },
+      { path: '/settings', lazy: loadPage(() => import('./features/settings/Settings')) },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
