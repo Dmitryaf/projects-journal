@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "summary": { "type": "string", "minLength": 1, "maxLength": 10000 },
+    "proposals": {
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": ["string", "null"] },
+          "title": { "type": "string", "minLength": 1, "maxLength": 240 },
+          "description": { "type": "string", "maxLength": 10000 },
+          "expectedResult": { "type": "string", "maxLength": 10000 },
+          "acceptance": { "type": "string", "maxLength": 10000 },
+          "priority": { "type": "string", "enum": ["low", "normal", "high"] },
+          "reason": { "type": "string", "minLength": 1, "maxLength": 10000 },
+          "sources": {
+            "minItems": 1,
+            "maxItems": 10,
+            "type": "array",
+            "items": { "type": "string", "minLength": 1, "maxLength": 100 }
+          }
+        },
+        "required": ["projectId", "title", "description", "expectedResult", "acceptance", "priority", "reason", "sources"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["summary", "proposals"],
+  "additionalProperties": false
+}
