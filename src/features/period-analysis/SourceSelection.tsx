@@ -1,0 +1,152 @@
+import type { PeriodSelection } from '../../../shared/period-analysis';
+import type { Project } from '../../../shared/contracts';
+const kinds = {
+  task: 'Результаты задач',
+  check: 'Действия и свидетельства проверок',
+  decision: 'Локальные решения',
+  observation: 'Наблюдения',
+  file_decision: 'Датированные метаданные файловых решений',
+} as const;
+export const emptySelection = (projectId: string | null): PeriodSelection => ({
+  projectIds: projectId ? [projectId] : [],
+  includeGeneral: false,
+  sourceKinds: [],
+  includeMetadata: false,
+  includeOpenTasks: false,
+  includeUserText: false,
+  includeRelatedReviews: false,
+  includeRelatedAnalyses: false,
+  codexDigestIds: [],
+});
+export const coreSelection = (value: PeriodSelection): PeriodSelection => ({
+  ...value,
+  sourceKinds: ['task', 'check', 'decision', 'observation'],
+  includeMetadata: true,
+  includeOpenTasks: true,
+  includeUserText: true,
+  includeProjectHistory: true,
+  includeRelatedReviews: true,
+});
+export function SourceSelection({
+  value,
+  onChange,
+  projects,
+  projectId,
+  disabled = false,
+}: {
+  value: PeriodSelection;
+  onChange: (value: PeriodSelection) => void;
+  projects: Project[];
+  projectId: string | null;
+  disabled?: boolean;
+}) {
+  const flag = (
+    key:
+      | 'includeMetadata'
+      | 'includeOpenTasks'
+      | 'includeUserText'
+      | 'includeRelatedReviews'
+      | 'includeProjectHistory'
+      | 'includeRelatedAnalyses',
+    label: string,
+  ) => (
+    <label className="check" key={key}>
+      <input
+        type="checkbox"
+        checked={!!value[key]}
+        onChange={(e) => onChange({ ...value, [key]: e.target.checked })}
+      />
+      {label}
+    </label>
+  );
+  return (
+    <fieldset disabled={disabled}>
+      <legend>Разрешённые источники</legend>
+      {!projectId && (
+        <div className="form-grid">
+          <div>
+            <p>Проекты</p>
+            {projects.map((p) => (
+              <label className="check" key={p.id}>
+                <input
+                  type="checkbox"
+                  checked={value.projectIds.includes(p.id)}
+                  onChange={(e) =>
+                    onChange({
+                      ...value,
+                      projectIds: e.target.checked
+                        ? [...value.projectIds, p.id]
+                        : value.projectIds.filter((id) => id !== p.id),
+                    })
+                  }
+                />
+                {p.metadata.name}
+              </label>
+            ))}
+          </div>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={value.includeGeneral}
+              onChange={(e) => onChange({ ...value, includeGeneral: e.target.checked })}
+            />
+            Общие и отвязанные записи без проекта
+          </label>
+        </div>
+      )}
+      <p>
+        Основной набор: цели и состояние, задачи и результаты, наблюдения, локальные решения,
+        проверки и прежние обзоры выбранных проектов, мой сохранённый текст текущего обзора. Файлы,
+        диалоги и прежние AI-ответы подключаются отдельно.
+      </p>
+      <button type="button" onClick={() => onChange(coreSelection(value))}>
+        Выбрать основной набор
+      </button>
+      <p className="help">
+        Выбор не отправляет данные. Ниже можно изменить состав; перед отправкой вы увидите весь
+        пакет. Если большой месячный обзор не помещается, выберите неделю или меньше проектов.
+      </p>
+      <details>
+        <summary>Настроить источники</summary>
+        {flag('includeMetadata', 'Текущая цель и состояние выбранных проектов')}
+        <p className="help">
+          Сводка включает название, тип, цель, этап, текущий фокус и блокировки. Опишите идею и
+          пользу проекта в поле «Зачем существует», если этих сведений пока нет.
+        </p>
+        {flag(
+          'includeProjectHistory',
+          'Предыстория выбранных проектов: до 3 прежних обзоров и 5 наблюдений каждого',
+        )}
+        {flag('includeOpenTasks', 'Текущие открытые задачи')}
+        {Object.entries(kinds).map(([key, label]) => (
+          <label className="check" key={key}>
+            <input
+              type="checkbox"
+              checked={value.sourceKinds.includes(key as PeriodSelection['sourceKinds'][number])}
+              onChange={(e) =>
+                onChange({
+                  ...value,
+                  sourceKinds: e.target.checked
+                    ? [...value.sourceKinds, key as PeriodSelection['sourceKinds'][number]]
+                    : value.sourceKinds.filter((kind) => kind !== key),
+                })
+              }
+            />
+            {label}
+          </label>
+        ))}
+        {flag('includeRelatedAnalyses', 'Последние успешные AI-итоги связанных обзоров')}
+        {flag('includeUserText', 'Мой сохранённый текст этого обзора')}
+        {flag(
+          'includeRelatedReviews',
+          'Тексты связанных обзоров выбранных проектов и общих записей',
+        )}
+      </details>
+      <p className="help">
+        Пути, Git, заметки проектов, тела файлов и переписки целиком не включаются. Итоги выбранных
+        диалогов подключаются отдельно. События передаются выдержками с отметкой сокращения. Выбор
+        источника разрешает подготовку пакета; отправка подтверждается отдельно.
+      </p>
+    </fieldset>
+  );
+}

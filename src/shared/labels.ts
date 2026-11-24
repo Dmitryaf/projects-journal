@@ -11,7 +11,12 @@ export const typeLabels = {
   other: 'Другое',
 };
 export const priorityLabels = { high: 'Высокий', normal: 'Обычный', low: 'Низкий' };
-export const taskLabels = { now: 'Сейчас', next: 'Следом', later: 'Позже' };
+export const workKindLabels = {
+  baseline: 'Запись при переходе',
+  result: 'Результат сохранён',
+  completed: 'Задача завершена',
+  reopened: 'Возвращена в работу',
+};
 export const ideaLabels = {
   new: 'Новая',
   consider: 'Стоит проверить',
@@ -33,7 +38,7 @@ export const relationLabels = {
 export function date(value?: string | null) {
   return value
     ? new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', year: 'numeric' }).format(
-        new Date(value),
+        new Date(value.length === 10 ? `${value}T12:00:00` : value),
       )
     : 'Нет данных';
 }

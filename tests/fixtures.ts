@@ -29,5 +29,10 @@ export async function fixture() {
     }
     return directory;
   }
-  return { root, repo, git, cleanup: () => rm(root, { recursive: true, force: true }) };
+  return {
+    root,
+    repo,
+    git,
+    cleanup: () => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }),
+  };
 }

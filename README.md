@@ -47,7 +47,7 @@ Projects work without this file. Edits saved in Control Center take priority ove
 
 ## Development
 
-Built with Vue 3, TypeScript, Vite, a local Java 25 and Spring Boot API, and SQLite. No accounts, cloud sync, GitHub integration, or AI services.
+Built with React, TypeScript, Vite, a local Java 25 and Spring Boot API, and SQLite. No accounts, cloud sync, GitHub integration, or AI services.
 
 ```sh
 npm run check    # Lint, typecheck, tests, and production build
