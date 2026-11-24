@@ -106,10 +106,12 @@ test('public audit → allowlist → private context → combined decisions → 
     await expect(page.getByRole('status')).toContainText('Данные обновлены');
     await expect(panel).toContainText('Приватный контекст недоступен');
     await page.goto('/');
-    const allAttention = page.getByRole('button', { name: /^Все поводы для внимания/ });
+    const attention = page.getByRole('region', { name: /^Требуют внимания/ });
+    await expect(attention).toBeVisible();
+    const allAttention = attention.getByRole('button', { name: /^Все поводы для внимания/ });
     if (await allAttention.isVisible()) await allAttention.click();
     await expect(
-      page.getByText('Не найден ранее подключённый приватный контекст', { exact: true }),
+      attention.getByText('Не найден ранее подключённый приватный контекст', { exact: true }),
     ).toBeVisible();
     await page.goto(`/projects/${project.id}`);
     await page.getByRole('button', { name: 'Действия проекта', exact: true }).click();
