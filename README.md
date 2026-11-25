@@ -1,6 +1,6 @@
 # Projects Journal
 
-A local project journal for keeping track of what happened, why you made decisions, and what comes next. The interface is in Russian.
+A local project journal for keeping track of what happened, why you made decisions, and what comes next.
 
 ## Current workflows
 

@@ -274,7 +274,6 @@ final class CodexAnalysis {
                     || !model.equals(value(parent, "model"))) {
                 throw new TaskError(409, "Для изменения проектов, файлов, источников или модели начните новое обсуждение.");
             }
-            // Use a stable ordering independent of the system locale.
             files = parentOrigin.get("files");
             payload = parent.path("payload").asObject().deepCopy();
             guards = verifiedRow(connection, parent, policy).guards().asObject();

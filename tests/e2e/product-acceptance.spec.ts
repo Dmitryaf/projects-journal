@@ -106,7 +106,7 @@ test('owner journey across active, paused, waiting and completed projects: brows
       expect(listed.isError).toBe(false);
       expect(listed.value.items).toHaveLength(1);
       const task = listed.value.items[0];
-      // This is a synthetic MCP receipt, not evidence of a real Codex coding session.
+      // Submit a sample result via MCP.
       const completed = await mcp!.call('task_complete', {
         identifier: task.code,
         revision: task.revision,
